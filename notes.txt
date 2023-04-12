@@ -1,0 +1,22 @@
+"@Eventbot create my event: blah blah"
+
+Create thread for message
+Reply with event data
+
+**Name:** My Cool Event
+**Date:** Thurs, June 3, 2023, 7:00 pm MDT
+**Location:** Code Talent, 1234 Main St, Denver, CO 80202
+**Desc:**
+This is a long desc
+It looks like this
+
+Merge:
+
+"Change this event data: My Cool Event is actually at 5 pm"
+
+Edit event data reply and replace message content
+
+Confirm:
+
+use GPT to convert event preview to JSON
+Create event in Discord
