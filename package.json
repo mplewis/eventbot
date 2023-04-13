@@ -1,0 +1,21 @@
+{
+  "name": "eventbot",
+  "version": "0.1.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --outdir=dist",
+    "start": "pnpm build && node dist/index.js",
+    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --outdir=dist && node dist/index.js'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "esbuild": "^0.17.16",
+    "nodemon": "^2.0.22",
+    "typescript": "^5.0.4"
+  }
+}
