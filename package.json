@@ -4,9 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --outdir=dist",
+    "build": "esbuild src/index.ts --bundle --platform=node --outdir=dist",
     "start": "pnpm build && node dist/index.js",
-    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --outdir=dist && node dist/index.js'",
+    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --platform=node --outdir=dist && node dist/index.js | pino-pretty'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +16,13 @@
     "@types/node": "^18.15.11",
     "esbuild": "^0.17.16",
     "nodemon": "^2.0.22",
+    "pino-pretty": "^10.0.0",
+    "prettier": "^2.8.7",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "discord.js": "^14.9.0",
+    "dotenv": "^16.0.3",
+    "pino": "^8.11.0"
   }
 }
