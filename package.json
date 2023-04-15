@@ -4,9 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --outdir=dist",
-    "start": "pnpm build && node dist/index.js",
-    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --platform=node --outdir=dist && node dist/index.js | pino-pretty'",
+    "build": "esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist",
+    "start": "pnpm build && node -r source-map-support/register dist/index.js",
+    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist && node -r source-map-support/register dist/index.js | pino-pretty'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,15 +14,20 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.15.11",
+    "@types/nunjucks": "^3.2.2",
     "esbuild": "^0.17.16",
     "nodemon": "^2.0.22",
     "pino-pretty": "^10.0.0",
     "prettier": "^2.8.7",
+    "source-map-support": "^0.5.21",
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "dayjs": "^1.11.7",
     "discord.js": "^14.9.0",
     "dotenv": "^16.0.3",
+    "nunjucks": "^3.2.4",
+    "openai": "^3.2.1",
     "pino": "^8.11.0"
   }
 }

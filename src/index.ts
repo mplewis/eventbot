@@ -1,13 +1,20 @@
-import { Client, ClientUser, Events, GatewayIntentBits } from "discord.js";
-import * as dotenv from "dotenv";
+import { Client, ClientUser, Events } from "discord.js";
+import { Configuration, OpenAIApi } from "openai";
 import { pino } from "pino";
+import dayjs from "dayjs";
+import { discordBotToken, openaiAPIKey } from "./env";
+import { prompt } from "./template";
 
 const glog = pino();
 
-dotenv.config();
+const configuration = new Configuration({ apiKey: openaiAPIKey });
+const openai = new OpenAIApi(configuration);
 
-const token = process.env.DISCORD_BOT_TOKEN;
-if (!token) throw new Error("missing bot token");
+(async () => {
+	const dateWithTZ = dayjs().format("MMMM D, YYYY, h:mm A z");
+	const promptData = await prompt.createEvent({ dateWithTZ, eventInfo: "Test stuff" });
+	glog.info(promptData);
+})();
 
 let me: ClientUser | undefined;
 const client = new Client({ intents: ["Guilds", "GuildMessages"] });
@@ -19,13 +26,23 @@ client.once(Events.ClientReady, (c) => {
 });
 
 glog.info("Connecting...");
-client.login(token);
+client.login(discordBotToken);
 
-client.on("messageCreate", (m) => {
+client.on("messageCreate", async (m) => {
 	if (!m.content) return;
 	if (m.author.id === me?.id) return;
 	const tagMatcher = /(<@\d+>\s*)/g;
 	const content = m.content.replaceAll(tagMatcher, "");
 	let log = glog.child({ from: m.author.id, me: me?.id, content });
 	log.info("Received message");
+
+	const dateWithTZ = dayjs().format("MMMM D, YYYY, h:mm A z");
+	const promptData = (await prompt.createEvent)({ dateWithTZ, eventInfo: content });
+
+	const completion = await openai.createCompletion({
+		model: "text-davinci-003",
+		prompt: promptData,
+	});
+	const resp = completion.data.choices[0].text || "Sorry, something went wrong.";
+	m.channel.send(resp);
 });

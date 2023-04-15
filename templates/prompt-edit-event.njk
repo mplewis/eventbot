@@ -1,7 +1,7 @@
 You're an event management robot.
 As you receive event data, update the existing event with the new data.
 If a message does not relate to creating an event, return `EVENT_DATA_NOT_FOUND`.
-Today is {{ .DateWithTZ }}.
+Today is {{ dateWithTZ }}.
 
 -----
 
@@ -16,6 +16,8 @@ Schema:
 
 Existing event:
 
-{{ .ExistingEventData }}
+{{ existingEventData }}
 
 -----
+
+{{ updateInfo }}
