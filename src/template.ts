@@ -1,18 +1,9 @@
-import { readFile } from "fs/promises";
-import nunjucks, { Template, compile } from "nunjucks";
-import { join } from "path";
+import nunjucks from "nunjucks";
 
-const templateCache: Record<string, Template> = {};
-
-nunjucks.configure({ autoescape: true });
+nunjucks.configure("templates", { autoescape: false });
 
 export async function render(name: string, args: object): Promise<string> {
-	if (!templateCache[name]) {
-		const path = join(__dirname, "..", "templates", `${name}.njk`);
-		const raw = await readFile(path, "utf-8");
-		templateCache[name] = compile(raw);
-	}
-	return templateCache[name].render(args);
+	return nunjucks.render(`${name}.njk`, args);
 }
 
 export async function promptCreateEvent(args: { dateWithTZ: string; eventInfo: string }): Promise<string> {

@@ -34,8 +34,8 @@ client.once(Events.ClientReady, (c) => {
 	const dateWithTZ = dayjs().format("MMMM D, YYYY, h:mm A z");
 	const prompt = await promptCreateEvent({ dateWithTZ, eventInfo: eventInfo });
 	glog.info(prompt);
-	const result = await complete(prompt);
-	glog.info(result);
+	// const result = await complete(prompt);
+	// glog.info(result);
 })();
 
 glog.info("Connecting...");
