@@ -1,5 +1,7 @@
+import dayjs from "dayjs";
 import nunjucks from "nunjucks";
 import { z } from "zod";
+import { prettyDateFormat } from "./pretty";
 
 nunjucks.configure("templates", { autoescape: false });
 
@@ -33,4 +35,12 @@ export async function promptEditEvent(args: {
 	updateInfo: string;
 }): Promise<string> {
 	return render("prompt-edit-event", args);
+}
+
+export function now() {
+	return {
+		// TODO: set tz for dayjs using config
+		dateWithTZ: dayjs().format(prettyDateFormat),
+		utcOffset: dayjs().format("Z"),
+	};
 }
