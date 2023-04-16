@@ -4,6 +4,9 @@ import {
 	ButtonInteraction,
 	ButtonStyle,
 	ClientUser,
+	GuildScheduledEventCreateOptions,
+	GuildScheduledEventEntityType,
+	GuildScheduledEventPrivacyLevel,
 	Message,
 	ModalBuilder,
 	TextInputBuilder,
@@ -17,6 +20,7 @@ import { parseEditEvent } from "./openai";
 
 import { CacheType, ModalSubmitInteraction } from "discord.js";
 import { now } from "./template";
+import z from "zod";
 
 export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	if (!m.content) return;
@@ -50,9 +54,6 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 }
 
 export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
-	const parsed = parsePPEvent(intn.message.content);
-	glog.debug(parsed);
-
 	const id = intn.customId;
 
 	if (id === "discardDraftBtn") {
@@ -79,6 +80,51 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 			);
 		await intn.showModal(modal);
 		return;
+	}
+
+	if (id === "createEventBtn") {
+		const { guild } = intn;
+		if (!guild) {
+			glog.error("No guild found for create event button");
+			intn.reply({ content: "Sorry, we ran into an issue creating your event.", ephemeral: true });
+			return;
+		}
+		const parsed = parsePPEvent(intn.message.content);
+		if ("error" in parsed) {
+			glog.error(parsed.error);
+			intn.reply({ content: "Sorry, we ran into an issue creating your event.", ephemeral: true });
+			return;
+		}
+
+		const { data } = parsed;
+		const schema = z.object({
+			name: z.string(),
+			date: z.string(),
+			location: z.string().or(z.null()),
+			url: z.string().or(z.null()),
+			desc: z.string().or(z.null()),
+		});
+		const validated = schema.safeParse(data);
+		if (!validated.success) {
+			intn.reply({
+				content: `Sorry, we ran into an issue creating your event:\n\`\`\`${validated.error.message}\`\`\``,
+				ephemeral: true,
+			});
+			return;
+		}
+
+		const v = validated.data;
+		const params: GuildScheduledEventCreateOptions = {
+			name: v.name,
+			scheduledStartTime: v.date,
+			privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+			entityType: GuildScheduledEventEntityType.External,
+		};
+		if (v.location) params.entityMetadata = { location: v.location };
+		if (v.desc) params.description = v.desc;
+		await guild.scheduledEvents.create(params);
+		await intn.message.delete();
+		intn.reply({ content: `Your event "${v.name}" was created successfully on the server!`, ephemeral: true });
 	}
 
 	(async () => {

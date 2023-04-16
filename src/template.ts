@@ -7,8 +7,10 @@ nunjucks.configure("templates", { autoescape: false });
 
 export const eventDataSchema = z.object({
 	name: z.string().or(z.null()),
+	// TODO: add support for end time
 	date: z.string().or(z.null()),
 	location: z.string().or(z.null()),
+	// TODO: get rid of url
 	url: z.string().or(z.null()),
 	desc: z.string().or(z.null()).or(z.undefined()), // we populate this
 });
