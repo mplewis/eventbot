@@ -8,7 +8,7 @@ describe("pretty", () => {
 			name: "Central Park Meetup",
 			date: "2021-08-01T19:00:00-04:00",
 			location: "Central Park",
-			url: "https://example.com",
+			url: null,
 		};
 		const desc = "Come to Central Park and hang out with us! Bring your own brats.";
 
@@ -18,7 +18,7 @@ describe("pretty", () => {
 				"**Name:** Central Park Meetup
 				**Date:** Sunday, August 1, 2021 at 5:00 PM MDT (2021-08-01T19:00:00-04:00)
 				**Location:** Central Park
-				**URL:** https://example.com
+				**URL:** *not provided*
 
 				Come to Central Park and hang out with us! Bring your own brats."
 			`);

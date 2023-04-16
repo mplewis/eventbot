@@ -9,6 +9,13 @@ dayjs.extend(timezone);
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
 export function ppEvent(data: EventData, desc: string): string {
+	for (const [key, value] of Object.entries(data)) {
+		const k = key as keyof EventData;
+		if (value === null) {
+			data[k] = "*not provided*";
+			continue;
+		}
+	}
 	return `
 **Name:** ${data.name}
 **Date:** ${dayjs(data.date).format(prettyDateFormat)} (${data.date})
