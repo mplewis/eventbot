@@ -43,7 +43,7 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEventBtn"),
 		new ButtonBuilder().setLabel("Edit Details").setStyle(ButtonStyle.Primary).setCustomId("editDetailsBtn"),
-		new ButtonBuilder().setLabel("Discard Draft").setStyle(ButtonStyle.Danger).setCustomId("deleteEventBtn")
+		new ButtonBuilder().setLabel("Discard Draft").setStyle(ButtonStyle.Danger).setCustomId("discardDraftBtn")
 	);
 	await m.channel.send({ content: msg, components: [row] });
 	await loading.delete();
@@ -54,6 +54,16 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 	glog.debug(parsed);
 
 	const id = intn.customId;
+
+	if (id === "discardDraftBtn") {
+		let forName = " ";
+		const resp = parsePPEvent(intn.message.content);
+		if ("data" in resp) forName = `for "${resp.data.name}" `;
+		await intn.message.delete();
+		intn.reply({ content: `Your event draft ${forName}was successfully discarded.`, ephemeral: true });
+		return;
+	}
+
 	if (id === "editDetailsBtn") {
 		const modal = new ModalBuilder()
 			.setCustomId("editDetailsModal")
