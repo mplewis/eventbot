@@ -1,7 +1,7 @@
 import { Configuration, CreateCompletionRequest, OpenAIApi } from "openai";
 import { openaiAPIKey } from "./env";
 import { glog } from "./log";
-import { EventData, eventDataSchema, promptCreateEvent, promptEditEvent, proposedEvent } from "./template";
+import { EventData, eventDataSchema, promptCreateEvent, promptEditEvent } from "./template";
 import { ZodType } from "zod";
 
 const configuration = new Configuration({ apiKey: openaiAPIKey });
@@ -16,7 +16,7 @@ const options: CreateCompletionRequest = {
 export type CompletionResult<T> = { result: T } | { irrelevant: true } | { error: string };
 
 async function complete<T>(validator: ZodType<T>, prompt: string): Promise<CompletionResult<T>> {
-	glog.info(prompt);
+	glog.debug(`prompt: ${prompt}`);
 	const completion = await openai.createCompletion({ ...options, prompt });
 	let { text } = completion.data.choices[0];
 	if (!text) return { error: "did not receive a completion" };
@@ -53,8 +53,4 @@ export async function parseEditEvent(
 		if (vals.size === 1 && vals.has(null)) return { irrelevant: true };
 	}
 	return resp;
-}
-
-export async function parseProposedEvent(...args: Parameters<typeof proposedEvent>): Promise<CompletionResult> {
-	return complete(await proposedEvent(...args));
 }
