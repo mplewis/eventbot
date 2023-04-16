@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { discordBotToken } from "./env";
 import { promptCreateEvent } from "./template";
 import { glog } from "./log";
-import { complete } from "./openai";
+import { parseCreateEvent, parseEditEvent } from "./openai";
 
 let me: ClientUser | undefined;
 const client = new Client({ intents: ["Guilds", "GuildMessages"] });
@@ -32,10 +32,19 @@ client.once(Events.ClientReady, (c) => {
 
 (async () => {
 	const dateWithTZ = dayjs().format("MMMM D, YYYY, h:mm A z");
-	const prompt = await promptCreateEvent({ dateWithTZ, eventInfo: eventInfo });
-	glog.info(prompt);
-	// const result = await complete(prompt);
-	// glog.info(result);
+	// const result = await parseCreateEvent({ dateWithTZ, eventInfo: eventInfo });
+	const result = await parseEditEvent({
+		dateWithTZ,
+		existingEventData: {
+			name: "Aurora Meetup",
+			date: "2021-09-25T14:00:00.000-07:00",
+			location: "Parkside Eatery",
+			url: null,
+		},
+		// updateInfo: "Event date changed to Sep 25, 4-7pm MDT",
+		updateInfo: eventInfo2,
+	});
+	glog.info(result);
 })();
 
 glog.info("Connecting...");
