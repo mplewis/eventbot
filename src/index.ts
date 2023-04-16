@@ -12,10 +12,10 @@ import dayjs from "dayjs";
 import { discordBotToken } from "./env";
 import { glog } from "./log";
 import { parseCreateEvent } from "./openai";
-import { parsePPEvent, ppEvent } from "./pretty";
+import { parsePPEvent, ppEvent, prettyDateFormat } from "./pretty";
 import { TextInputStyle } from "discord.js";
 import { ModalActionRowComponentBuilder } from "discord.js";
-import { ActionRow } from "discord.js";
+import { parseEditEvent } from "./openai";
 
 let me: ClientUser | undefined;
 const client = new Client({ intents: ["Guilds", "GuildMessages"] });
@@ -29,6 +29,14 @@ client.once(Events.ClientReady, (c) => {
 glog.info("Connecting...");
 client.login(discordBotToken);
 
+function now() {
+	return {
+		// TODO: set tz for dayjs using config
+		dateWithTZ: dayjs().format(prettyDateFormat),
+		utcOffset: dayjs().format("Z"),
+	};
+}
+
 client.on("messageCreate", async (m) => {
 	if (!m.content) return;
 	if (m.author.id === me?.id) return;
@@ -39,9 +47,7 @@ client.on("messageCreate", async (m) => {
 
 	const loading = await m.channel.send("Thinking...");
 
-	const dateWithTZ = dayjs().format("MMMM D, YYYY, h:mm A z");
-	const utcOffset = dayjs().format("Z");
-	const resp = await parseCreateEvent({ dateWithTZ, utcOffset, eventInfo: content });
+	const resp = await parseCreateEvent({ ...now(), eventInfo: content });
 	if ("error" in resp) {
 		log.error(resp.error);
 		m.channel.send("Sorry, something went wrong.");
@@ -76,9 +82,10 @@ client.on("interactionCreate", async (intn) => {
 				.addComponents(
 					new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
 						new TextInputBuilder()
-							.setCustomId("updateData")
+							.setCustomId("updateInfo")
 							.setLabel("What do you want to change?")
 							.setStyle(TextInputStyle.Paragraph)
+							.setPlaceholder("e.g.\nThe event starts at 4 pm, Jan 11.\nThe address is 123 Wynkoop St.")
 					)
 				);
 			await intn.showModal(modal);
@@ -96,14 +103,41 @@ client.on("interactionCreate", async (intn) => {
 			glog.error("No message found for modal submit");
 			return;
 		}
-		const parsed = parsePPEvent(intn.message.content);
-		glog.debug(parsed);
+		const resp1 = parsePPEvent(intn.message.content);
+		if ("error" in resp1) {
+			glog.error(resp1.error);
+			intn.reply({
+				content: "Sorry, we ran into an issue editing your event. Please try recreating the event from scratch.",
+				ephemeral: true,
+			});
+			return;
+		}
+		glog.debug(resp1);
+		const { data, desc } = resp1;
 
-		intn.message.edit("Updating your event data, please wait...");
+		const updateInfo = intn.fields.getTextInputValue("updateInfo");
+		const resp2 = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
+		if ("error" in resp2) {
+			glog.error(resp2.error);
+			intn.reply({
+				content: `Sorry, we ran into an issue editing your event. Please try again.\n\nYou sent:\n${updateInfo}`,
+				ephemeral: true,
+			});
+			return;
+		}
+		if ("irrelevant" in resp2) {
+			intn.reply({
+				content: `Sorry, the message you wrote didn't look like an event update to me.\n\nYou sent:\n${updateInfo}`,
+				ephemeral: true,
+			});
+			return;
+		}
+		const updated = ppEvent(resp2.result, desc);
+		await intn.message.edit(updated);
 
 		(async () => {
-			const resp = await intn.reply({ content: "Modal submitted", ephemeral: true });
-			setTimeout(() => resp.delete(), 2000);
+			const resp = await intn.reply({ content: "Updated your event data!", ephemeral: true });
+			setTimeout(() => resp.delete(), 5000);
 		})();
 	}
 });
