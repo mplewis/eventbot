@@ -1,9 +1,21 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, ClientUser, Events } from "discord.js";
+import {
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	Client,
+	ClientUser,
+	Events,
+	ModalBuilder,
+	TextInputBuilder,
+} from "discord.js";
 import dayjs from "dayjs";
 import { discordBotToken } from "./env";
 import { glog } from "./log";
 import { parseCreateEvent } from "./openai";
 import { parsePPEvent, ppEvent } from "./pretty";
+import { TextInputStyle } from "discord.js";
+import { ModalActionRowComponentBuilder } from "discord.js";
+import { ActionRow } from "discord.js";
 
 let me: ClientUser | undefined;
 const client = new Client({ intents: ["Guilds", "GuildMessages"] });
@@ -41,23 +53,57 @@ client.on("messageCreate", async (m) => {
 	}
 	const msg = ppEvent(resp.result, content);
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEvent"),
-		new ButtonBuilder().setLabel("Edit Details").setStyle(ButtonStyle.Primary).setCustomId("editDetails"),
-		new ButtonBuilder().setLabel("Delete Event").setStyle(ButtonStyle.Danger).setCustomId("deleteEvent")
+		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEventBtn"),
+		new ButtonBuilder().setLabel("Edit Details").setStyle(ButtonStyle.Primary).setCustomId("editDetailsBtn"),
+		new ButtonBuilder().setLabel("Delete Event").setStyle(ButtonStyle.Danger).setCustomId("deleteEventBtn")
 	);
 	await m.channel.send({ content: msg, components: [row] });
 	await loading.delete();
 });
 
 client.on("interactionCreate", async (intn) => {
-	if (!intn.isButton()) return;
 	glog.debug(intn);
 
-	const parsed = parsePPEvent(intn.message.content);
-	glog.debug(parsed);
+	if (intn.isButton()) {
+		const parsed = parsePPEvent(intn.message.content);
+		glog.debug(parsed);
 
-	(async () => {
-		const resp = await intn.reply({ content: `\`${intn.customId}\` not implemented yet.`, ephemeral: true });
-		setTimeout(() => resp.delete(), 2000);
-	})();
+		const id = intn.customId;
+		if (id === "editDetailsBtn") {
+			const modal = new ModalBuilder()
+				.setCustomId("editDetailsModal")
+				.setTitle("Edit Event Details")
+				.addComponents(
+					new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+						new TextInputBuilder()
+							.setCustomId("updateData")
+							.setLabel("What do you want to change?")
+							.setStyle(TextInputStyle.Paragraph)
+					)
+				);
+			await intn.showModal(modal);
+			return;
+		}
+
+		(async () => {
+			const resp = await intn.reply({ content: `\`${intn.customId}\` not implemented yet.`, ephemeral: true });
+			setTimeout(() => resp.delete(), 2000);
+		})();
+	}
+
+	if (intn.isModalSubmit()) {
+		if (!intn.message) {
+			glog.error("No message found for modal submit");
+			return;
+		}
+		const parsed = parsePPEvent(intn.message.content);
+		glog.debug(parsed);
+
+		intn.message.edit("Updating your event data, please wait...");
+
+		(async () => {
+			const resp = await intn.reply({ content: "Modal submitted", ephemeral: true });
+			setTimeout(() => resp.delete(), 2000);
+		})();
+	}
 });
