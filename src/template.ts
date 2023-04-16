@@ -18,24 +18,19 @@ export async function render(name: string, args: Record<string, any>): Promise<s
 	return nunjucks.render(`${name}.njk`, args);
 }
 
-export async function promptCreateEvent(args: { dateWithTZ: string; eventInfo: string }): Promise<string> {
+export async function promptCreateEvent(args: {
+	dateWithTZ: string;
+	utcOffset: string;
+	eventInfo: string;
+}): Promise<string> {
 	return render("prompt-create-event", args);
 }
 
 export async function promptEditEvent(args: {
 	dateWithTZ: string;
+	utcOffset: string;
 	existingEventData: EventData;
 	updateInfo: string;
 }): Promise<string> {
 	return render("prompt-edit-event", args);
-}
-
-export async function proposedEvent(args: {
-	name: string;
-	date: string;
-	location: string;
-	url: string;
-	desc: string;
-}): Promise<string> {
-	return render("proposed-event", args);
 }

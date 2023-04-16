@@ -6,14 +6,14 @@ When the message does not provide data for a field, leave the field as null.
 Some users will send nonsense data that does not clearly describe an event.
 If a message does not describe an event, return {"irrelevant": true}.
 
-Today is {{ dateWithTZ }}. Use this timezone for all output.
+Today is {{ dateWithTZ }}.
 
 -----
 
 Schema for parsed output with example data:
 {
 	"name": string | null
-	"date": ISO8601 datetime | null
+	"date": ISO8601 datetime, timezone: {{ TZ }} | null
 	"location": string | null
 	"url": string | null
 }

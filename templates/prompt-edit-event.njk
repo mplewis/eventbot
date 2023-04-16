@@ -15,7 +15,7 @@ Today is {{ dateWithTZ }}. Use this timezone for all output.
 Schema for parsed output with example data:
 {
 	"name": string | null
-	"date": ISO8601 datetime | null
+	"date": ISO8601 datetime, UTC offset: {{ utcOffset }} | null
 	"location": string | null
 	"url": string | null
 }
