@@ -6,7 +6,7 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist",
     "start": "pnpm build && node -r source-map-support/register dist/index.js",
-    "watch": "pnpm nodemon --watch src -e js,ts --exec 'esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist && node -r source-map-support/register dist/index.js | pino-pretty'",
+    "watch": "pnpm nodemon --watch src -e js,ts,njk --exec 'esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist && node -r source-map-support/register dist/index.js | pino-pretty'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -28,6 +28,7 @@
     "dotenv": "^16.0.3",
     "nunjucks": "^3.2.4",
     "openai": "^3.2.1",
-    "pino": "^8.11.0"
+    "pino": "^8.11.0",
+    "ts-pattern": "^4.2.2"
   }
 }
