@@ -16,7 +16,7 @@ describe("pretty", () => {
 			const pp = ppEvent(data, desc);
 			expect(pp).toMatchInlineSnapshot(`
 				"**Name:** Central Park Meetup
-				**Date:** 2021-08-01T19:00:00-04:00
+				**Date:** Sunday, August 1, 2021 at 5:00 PM MDT (2021-08-01T19:00:00-04:00)
 				**Location:** Central Park
 				**URL:** https://example.com
 
