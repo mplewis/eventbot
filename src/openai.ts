@@ -17,13 +17,13 @@ export type CompletionResult<T> = { result: T } | { irrelevant: true } | { error
 
 async function complete<T>(validator: ZodType<T>, prompt: string): Promise<CompletionResult<T>> {
 	glog.debug(`prompt: ${prompt}`);
-	const completion = await openai.createCompletion({ ...options, prompt });
-	let { text } = completion.data.choices[0];
-	if (!text) return { error: "did not receive a completion" };
-	if (prompt.trim().endsWith("{")) text = `{${text}`;
-
 	let result: unknown;
 	try {
+		const completion = await openai.createCompletion({ ...options, prompt });
+		let { text } = completion.data.choices[0];
+		if (!text) return { error: "did not receive a completion" };
+		if (prompt.trim().endsWith("{") && !text.trim().startsWith("{")) text = `{${text}`;
+		glog.debug(text);
 		result = JSON.parse(text);
 		if (!result) return { error: "did not parse anything" };
 		if (typeof result !== "object") return { error: `did not parse an object: got ${result}` };
