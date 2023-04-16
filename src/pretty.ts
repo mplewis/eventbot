@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { EventData } from "./template";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import timezone from "dayjs/plugin/timezone";
+import { glog } from "./log";
 
 dayjs.extend(advancedFormat);
 dayjs.extend(timezone);
@@ -9,6 +10,12 @@ dayjs.extend(timezone);
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
 const MISSING_SENTINEL = "*not provided*";
+
+function formatDate(date: string | null | undefined): string {
+	glog.debug(date);
+	if (!date || date === "" || date === MISSING_SENTINEL) return MISSING_SENTINEL;
+	return `${dayjs(date).format(prettyDateFormat)} (${date})`;
+}
 
 export function ppEvent(data: EventData): string {
 	const d: Record<string, any> = {};
@@ -21,8 +28,8 @@ export function ppEvent(data: EventData): string {
 *I understand natural language – you can tell me to "change the date to 7:30 PM on Jan 11" or "change the location to Cheesman Park."*
 ────────────────────────────────────────
 **Name:** ${d.name}
-**Start:** ${dayjs(d.start).format(prettyDateFormat)} (${d.start})
-**End:** ${dayjs(d.end).format(prettyDateFormat)} (${d.end})
+**Start:** ${formatDate(d.start)}
+**End:** ${formatDate(d.end)}
 **Location:** ${d.location}
 
 ${d.desc}
@@ -30,8 +37,9 @@ ${d.desc}
 }
 
 export function parsePPEvent(raw: string): { data: EventData } | { error: string } {
+	// TODO: update regex to handle sentinel value for dates
 	const matcher =
-		/\*\*Name:\*\* (.*)\n\*\*Start:\*\* [^\(]*\((.*)\)\n\*\*End:\*\* [^\(]*\((.*)\)\n\*\*Location:\*\* (.*)\n\n([\s\S]*)/;
+		/\*\*Name:\*\* (.*)\n\*\*Start:\*\* ([^\(]*\((.*)\)|\*not provided\*)\n\*\*End:\*\* ([^\(]*\((.*)\)|\*not provided\*)\n\*\*Location:\*\* (.*)\n\n([\s\S]*)/;
 	const match = matcher.exec(raw);
 	if (!match) return { error: "failed to parse event" };
 	const vals: (string | null)[] = [];

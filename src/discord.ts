@@ -100,17 +100,24 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 		}
 
 		const { data } = parsed;
+		const errSchema = (name: string) => ({
+			required_error: `Please provide a ${name} for your event.`,
+			invalid_type_error: `Please provide a valid ${name} for your event.`,
+		});
 		const schema = z.object({
-			name: z.string(),
-			start: z.string(),
-			end: z.string(),
+			name: z.string({ ...errSchema("name") }),
+			start: z.string({ ...errSchema("start time") }),
+			end: z.string({ ...errSchema("end time") }),
+			desc: z.string({ ...errSchema("description") }),
 			location: z.string().or(z.null()),
-			desc: z.string().or(z.null()),
 		});
 		const validated = schema.safeParse(data);
 		if (!validated.success) {
+			const { error } = validated;
+			const msgs = error.issues.map((e: any) => `**${e.path.join(".")}**: ${e.message}`).join("\n");
+			glog.debug(error);
 			intn.reply({
-				content: `Sorry, we ran into an issue creating your event:\n\`\`\`${validated.error.message}\`\`\``,
+				content: `Please fix the below issue(s) before creating your event:\n${msgs}`,
 				ephemeral: true,
 			});
 			return;
