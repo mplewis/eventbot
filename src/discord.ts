@@ -59,9 +59,12 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 	if (id === "discardDraftBtn") {
 		let forName = " ";
 		const resp = parsePPEvent(intn.message.content);
-		if ("data" in resp) forName = `for "${resp.data.name}" `;
+		if ("data" in resp) forName = `for "${resp.data.name}"`;
 		await intn.message.delete();
-		intn.reply({ content: `Your event draft ${forName}was successfully discarded.`, ephemeral: true });
+		intn.reply({
+			content: `Your event draft ${forName} was successfully discarded.`.replaceAll(/\s+/g, " "),
+			ephemeral: true,
+		});
 		return;
 	}
 
@@ -99,9 +102,9 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 		const { data } = parsed;
 		const schema = z.object({
 			name: z.string(),
-			date: z.string(),
+			start: z.string(),
+			end: z.string(),
 			location: z.string().or(z.null()),
-			url: z.string().or(z.null()),
 			desc: z.string().or(z.null()),
 		});
 		const validated = schema.safeParse(data);
@@ -116,15 +119,27 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 		const v = validated.data;
 		const params: GuildScheduledEventCreateOptions = {
 			name: v.name,
-			scheduledStartTime: v.date,
+			scheduledStartTime: v.start,
+			scheduledEndTime: v.end,
 			privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
 			entityType: GuildScheduledEventEntityType.External,
 		};
 		if (v.location) params.entityMetadata = { location: v.location };
 		if (v.desc) params.description = v.desc;
-		await guild.scheduledEvents.create(params);
+		try {
+			await guild.scheduledEvents.create(params);
+		} catch (e) {
+			glog.error(e);
+			intn.reply({
+				content: `Sorry, we ran into an issue creating your event:\n\`\`\`${e}\`\`\``,
+				ephemeral: true,
+			});
+			return;
+		}
 		await intn.message.delete();
 		intn.reply({ content: `Your event "${v.name}" was created successfully on the server!`, ephemeral: true });
+		// TODO: Better public event creation message (pretty tmpl w/ diff prefix)
+		return;
 	}
 
 	(async () => {
@@ -152,6 +167,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 	glog.debug(resp1);
 	const { data } = resp1;
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
+	const loading = intn.reply({ content: "Updating your event data. Please wait...", ephemeral: true });
 
 	const resp2 = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
 	glog.debug(resp2);
@@ -161,6 +177,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 			content: `Sorry, we ran into an issue editing your event. Please try again.\n\nYou sent:\n${updateInfo}`,
 			ephemeral: true,
 		});
+		(await loading).delete();
 		return;
 	}
 	if ("irrelevant" in resp2) {
@@ -168,14 +185,11 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 			content: `Sorry, the message you wrote didn't look like an event update to me.\n\nYou sent:\n${updateInfo}`,
 			ephemeral: true,
 		});
+		(await loading).delete();
 		return;
 	}
 
 	const updated = ppEvent(resp2.result);
 	await intn.message.edit(updated);
-
-	(async () => {
-		const resp = await intn.reply({ content: "Updated your event data!", ephemeral: true });
-		setTimeout(() => resp.delete(), 5000);
-	})();
+	(await loading).delete();
 }

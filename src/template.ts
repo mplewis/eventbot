@@ -7,11 +7,9 @@ nunjucks.configure("templates", { autoescape: false });
 
 export const eventDataSchema = z.object({
 	name: z.string().or(z.null()),
-	// TODO: add support for end time
-	date: z.string().or(z.null()),
+	start: z.string().or(z.null()), // ISO8601
+	end: z.string().or(z.null()), // ISO8601
 	location: z.string().or(z.null()),
-	// TODO: get rid of url
-	url: z.string().or(z.null()),
 	desc: z.string().or(z.null()).or(z.undefined()), // we populate this
 });
 export type EventData = z.infer<typeof eventDataSchema>;

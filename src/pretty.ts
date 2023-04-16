@@ -21,9 +21,9 @@ export function ppEvent(data: EventData): string {
 *I understand natural language – you can tell me to "change the date to 7:30 PM on Jan 11" or "change the location to Cheesman Park."*
 ────────────────────────────────────────
 **Name:** ${d.name}
-**Date:** ${dayjs(d.date).format(prettyDateFormat)} (${d.date})
+**Start:** ${dayjs(d.start).format(prettyDateFormat)} (${d.start})
+**End:** ${dayjs(d.end).format(prettyDateFormat)} (${d.end})
 **Location:** ${d.location}
-**URL:** ${d.url}
 
 ${d.desc}
 	`.trim();
@@ -31,7 +31,7 @@ ${d.desc}
 
 export function parsePPEvent(raw: string): { data: EventData } | { error: string } {
 	const matcher =
-		/\*\*Name:\*\* (.*)\n\*\*Date:\*\* [^\(]*\((.*)\)\n\*\*Location:\*\* (.*)\n\*\*URL:\*\* (.*)\n\n([\s\S]*)/;
+		/\*\*Name:\*\* (.*)\n\*\*Start:\*\* [^\(]*\((.*)\)\n\*\*End:\*\* [^\(]*\((.*)\)\n\*\*Location:\*\* (.*)\n\n([\s\S]*)/;
 	const match = matcher.exec(raw);
 	if (!match) return { error: "failed to parse event" };
 	const vals: (string | null)[] = [];
@@ -39,6 +39,6 @@ export function parsePPEvent(raw: string): { data: EventData } | { error: string
 		vals[i] = match[i];
 		if (match[i] === MISSING_SENTINEL) vals[i] = null;
 	}
-	const [, name, date, location, url, desc] = vals;
-	return { data: { name, date, location, url, desc } };
+	const [, name, start, end, location, desc] = vals;
+	return { data: { name, start, end, location, desc } };
 }

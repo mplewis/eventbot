@@ -14,9 +14,9 @@ If not specified, all URLs start with `https://`.
 Schema for parsed output with example data:
 {
 	"name": string | null,
-	"date": ISO8601 datetime (UTC offset: {{ utcOffset }}) | null,
+	"start": ISO8601 datetime (UTC offset: {{ utcOffset }}) | null,
+	"end": ISO8601 datetime (UTC offset: {{ utcOffset }}) | null,
 	"location": string | null,
-	"url": string | null,
 	"desc": string | null,
 }
 
