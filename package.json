@@ -6,8 +6,8 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist",
     "start": "pnpm build && node -r source-map-support/register dist/index.js",
-    "watch": "pnpm nodemon --watch src --watch templates -e js,ts,njk --exec 'esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist && node -r source-map-support/register dist/index.js | pino-pretty'",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "watch": "nodemon --watch src --watch templates -e js,ts,njk --exec 'esbuild src/index.ts --bundle --platform=node --sourcemap --external:fsevents --outdir=dist && node -r source-map-support/register dist/index.js | pino-pretty'",
+    "test": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +20,8 @@
     "pino-pretty": "^10.0.0",
     "prettier": "^2.8.7",
     "source-map-support": "^0.5.21",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "vitest": "^0.30.1"
   },
   "dependencies": {
     "dayjs": "^1.11.7",
