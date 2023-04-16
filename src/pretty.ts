@@ -8,19 +8,19 @@ dayjs.extend(timezone);
 
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
+const MISSING_SENTINEL = "*not provided*";
+
 export function ppEvent(data: EventData, desc: string): string {
+	const d: Record<string, any> = {};
 	for (const [key, value] of Object.entries(data)) {
 		const k = key as keyof EventData;
-		if (value === null) {
-			data[k] = "*not provided*";
-			continue;
-		}
+		d[k] = value ?? MISSING_SENTINEL;
 	}
 	return `
-**Name:** ${data.name}
-**Date:** ${dayjs(data.date).format(prettyDateFormat)} (${data.date})
-**Location:** ${data.location}
-**URL:** ${data.url}
+**Name:** ${d.name}
+**Date:** ${dayjs(d.date).format(prettyDateFormat)} (${d.date})
+**Location:** ${d.location}
+**URL:** ${d.url}
 
 ${desc}
 	`.trim();
@@ -31,6 +31,11 @@ export function parsePPEvent(raw: string): { data: EventData; desc: string } | {
 		/\*\*Name:\*\* (.*)\n\*\*Date:\*\* [^\(]*\((.*)\)\n\*\*Location:\*\* (.*)\n\*\*URL:\*\* (.*)\n\n([\s\S]*)/;
 	const match = matcher.exec(raw);
 	if (!match) return { error: "failed to parse event" };
-	const [, name, date, location, url, desc] = match;
-	return { data: { name, date, location, url }, desc };
+	const vals: (string | null)[] = [];
+	for (let i = 1; i < match.length; i++) {
+		vals[i] = match[i];
+		if (match[i] === MISSING_SENTINEL) vals[i] = null;
+	}
+	const [, name, date, location, url, desc] = vals;
+	return { data: { name, date, location, url }, desc: desc ?? "*description is missing*" };
 }
