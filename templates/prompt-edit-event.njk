@@ -9,14 +9,15 @@ Some users will send nonsense data that does not clearly describe an event.
 If the input data with update does not describe a valid set of event changes, return {"irrelevant": true}.
 
 Today is {{ dateWithTZ }}. Use this timezone for all output.
+If not specified, all URLs start with `https://`.
 
 -----
 
 Schema for parsed output with example data:
 {
-	"name": string | null
-	"date": ISO8601 datetime, UTC offset: {{ utcOffset }} | null
-	"location": string | null
+	"name": string | null,
+	"date": ISO8601 datetime (UTC offset: {{ utcOffset }}) | null,
+	"location": string | null,
 	"url": string | null
 }
 
