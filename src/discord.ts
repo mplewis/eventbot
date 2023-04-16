@@ -43,7 +43,7 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEventBtn"),
 		new ButtonBuilder().setLabel("Edit Details").setStyle(ButtonStyle.Primary).setCustomId("editDetailsBtn"),
-		new ButtonBuilder().setLabel("Delete Event").setStyle(ButtonStyle.Danger).setCustomId("deleteEventBtn")
+		new ButtonBuilder().setLabel("Discard Draft").setStyle(ButtonStyle.Danger).setCustomId("deleteEventBtn")
 	);
 	await m.channel.send({ content: msg, components: [row] });
 	await loading.delete();
@@ -82,20 +82,23 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		glog.error("No message found for modal submit");
 		return;
 	}
+
 	const resp1 = parsePPEvent(intn.message.content);
 	if ("error" in resp1) {
 		glog.error(resp1.error);
 		intn.reply({
-			content: "Sorry, we ran into an issue editing your event. Please try recreating the event from scratch.",
+			content:
+				"Sorry, we ran into an issue editing your event. Please delete your event and try recreating it from scratch.",
 			ephemeral: true,
 		});
 		return;
 	}
 	glog.debug(resp1);
 	const { data } = resp1;
-
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
+
 	const resp2 = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
+	glog.debug(resp2);
 	if ("error" in resp2) {
 		glog.error(resp2.error);
 		intn.reply({
@@ -111,6 +114,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		});
 		return;
 	}
+
 	const updated = ppEvent(resp2.result);
 	await intn.message.edit(updated);
 

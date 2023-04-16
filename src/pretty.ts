@@ -17,6 +17,9 @@ export function ppEvent(data: EventData): string {
 		d[k] = value ?? MISSING_SENTINEL;
 	}
 	return `
+*Here's your event preview. If everything looks good, hit **Create Event** to add it to the server. Otherwise, you can correct the details or delete this draft.*
+*I understand natural language – you can tell me to "change the date to 7:30 PM on Jan 11" or "change the location to Cheesman Park."*
+────────────────────────────────────────
 **Name:** ${d.name}
 **Date:** ${dayjs(d.date).format(prettyDateFormat)} (${d.date})
 **Location:** ${d.location}
