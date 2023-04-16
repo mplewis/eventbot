@@ -10,7 +10,7 @@ export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
 const MISSING_SENTINEL = "*not provided*";
 
-export function ppEvent(data: EventData, desc: string): string {
+export function ppEvent(data: EventData): string {
 	const d: Record<string, any> = {};
 	for (const [key, value] of Object.entries(data)) {
 		const k = key as keyof EventData;
@@ -22,11 +22,11 @@ export function ppEvent(data: EventData, desc: string): string {
 **Location:** ${d.location}
 **URL:** ${d.url}
 
-${desc}
+${d.desc}
 	`.trim();
 }
 
-export function parsePPEvent(raw: string): { data: EventData; desc: string } | { error: string } {
+export function parsePPEvent(raw: string): { data: EventData } | { error: string } {
 	const matcher =
 		/\*\*Name:\*\* (.*)\n\*\*Date:\*\* [^\(]*\((.*)\)\n\*\*Location:\*\* (.*)\n\*\*URL:\*\* (.*)\n\n([\s\S]*)/;
 	const match = matcher.exec(raw);
@@ -37,5 +37,5 @@ export function parsePPEvent(raw: string): { data: EventData; desc: string } | {
 		if (match[i] === MISSING_SENTINEL) vals[i] = null;
 	}
 	const [, name, date, location, url, desc] = vals;
-	return { data: { name, date, location, url }, desc: desc ?? "*description is missing*" };
+	return { data: { name, date, location, url, desc } };
 }

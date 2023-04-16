@@ -26,4 +26,5 @@ client.on("interactionCreate", async (intn) => {
 	glog.debug(intn);
 	if (intn.isButton()) return handleButtonClick(intn);
 	if (intn.isModalSubmit()) return handleModalSubmit(intn);
+	glog.error(`Unknown interaction type: ${intn.type}`);
 });

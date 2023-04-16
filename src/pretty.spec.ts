@@ -9,11 +9,11 @@ describe("pretty", () => {
 			date: "2021-08-01T19:00:00-04:00",
 			location: "Central Park",
 			url: null,
+			desc: "Come to Central Park and hang out with us! Bring your own brats.",
 		};
-		const desc = "Come to Central Park and hang out with us! Bring your own brats.";
 
 		it("pretty prints an event", () => {
-			const pp = ppEvent(data, desc);
+			const pp = ppEvent(data);
 			expect(pp).toMatchInlineSnapshot(`
 				"**Name:** Central Park Meetup
 				**Date:** Sunday, August 1, 2021 at 5:00 PM MDT (2021-08-01T19:00:00-04:00)
@@ -25,9 +25,9 @@ describe("pretty", () => {
 		});
 
 		it("is reversible", () => {
-			const pretty = ppEvent(data, desc);
+			const pretty = ppEvent(data);
 			const parsed = parsePPEvent(pretty);
-			expect(parsed).toEqual({ data, desc });
+			expect(parsed).toEqual({ data });
 		});
 	});
 });

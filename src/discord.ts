@@ -38,7 +38,8 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 		m.channel.send("Sorry, that didn't look like an event to me.");
 		return;
 	}
-	const msg = ppEvent(resp.result, content);
+	// Manually copy the full event body as the content when we create an event. We can't trust the LLM to do it.
+	const msg = ppEvent({ ...resp.result, desc: content });
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEventBtn"),
 		new ButtonBuilder().setLabel("Edit Details").setStyle(ButtonStyle.Primary).setCustomId("editDetailsBtn"),
@@ -91,7 +92,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		return;
 	}
 	glog.debug(resp1);
-	const { data, desc } = resp1;
+	const { data } = resp1;
 
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
 	const resp2 = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
@@ -110,7 +111,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		});
 		return;
 	}
-	const updated = ppEvent(resp2.result, desc);
+	const updated = ppEvent(resp2.result);
 	await intn.message.edit(updated);
 
 	(async () => {

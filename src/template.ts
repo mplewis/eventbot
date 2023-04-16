@@ -10,6 +10,7 @@ export const eventDataSchema = z.object({
 	date: z.string().or(z.null()),
 	location: z.string().or(z.null()),
 	url: z.string().or(z.null()),
+	desc: z.string().or(z.null()).or(z.undefined()), // we populate this
 });
 export type EventData = z.infer<typeof eventDataSchema>;
 
