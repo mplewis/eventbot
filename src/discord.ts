@@ -58,8 +58,8 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 
 	if (id === "discardDraftBtn") {
 		let forName = " ";
-		const resp = parsePPEvent(intn.message.content);
-		if ("data" in resp) forName = `for "${resp.data.name}"`;
+		const data = parsePPEvent(intn.message.content);
+		if (data.name) forName = `for "${data.name}"`;
 		await intn.message.delete();
 		intn.reply({
 			content: `Your event draft ${forName} was successfully discarded.`.replaceAll(/\s+/g, " "),
@@ -92,14 +92,7 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 			intn.reply({ content: "Sorry, we ran into an issue creating your event.", ephemeral: true });
 			return;
 		}
-		const parsed = parsePPEvent(intn.message.content);
-		if ("error" in parsed) {
-			glog.error(parsed.error);
-			intn.reply({ content: "Sorry, we ran into an issue creating your event.", ephemeral: true });
-			return;
-		}
-
-		const { data } = parsed;
+		const data = parsePPEvent(intn.message.content);
 		const errSchema = (name: string) => ({
 			required_error: `Please provide a ${name} for your event.`,
 			invalid_type_error: `Please provide a valid ${name} for your event.`,
@@ -161,25 +154,15 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		return;
 	}
 
-	const resp1 = parsePPEvent(intn.message.content);
-	if ("error" in resp1) {
-		glog.error(resp1.error);
-		intn.reply({
-			content:
-				"Sorry, we ran into an issue editing your event. Please delete your event and try recreating it from scratch.",
-			ephemeral: true,
-		});
-		return;
-	}
-	glog.debug(resp1);
-	const { data } = resp1;
+	const data = parsePPEvent(intn.message.content);
+	glog.debug(data);
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
 	const loading = intn.reply({ content: "Updating your event data. Please wait...", ephemeral: true });
 
-	const resp2 = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
-	glog.debug(resp2);
-	if ("error" in resp2) {
-		glog.error(resp2.error);
+	const resp = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
+	glog.debug(resp);
+	if ("error" in resp) {
+		glog.error(resp.error);
 		intn.reply({
 			content: `Sorry, we ran into an issue editing your event. Please try again.\n\nYou sent:\n${updateInfo}`,
 			ephemeral: true,
@@ -187,7 +170,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		(await loading).delete();
 		return;
 	}
-	if ("irrelevant" in resp2) {
+	if ("irrelevant" in resp) {
 		intn.reply({
 			content: `Sorry, the message you wrote didn't look like an event update to me.\n\nYou sent:\n${updateInfo}`,
 			ephemeral: true,
@@ -196,7 +179,7 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 		return;
 	}
 
-	const updated = ppEvent(resp2.result);
+	const updated = ppEvent(resp.result);
 	await intn.message.edit(updated);
 	(await loading).delete();
 }

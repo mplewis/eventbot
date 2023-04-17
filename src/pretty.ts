@@ -10,11 +10,23 @@ dayjs.extend(timezone);
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
 const MISSING_SENTINEL = "*not provided*";
+const kvMatcher = /^\*\*([A-Za-z]+):\*\* (.*)$/;
+const dateMatcher = /[^\(]+\(([^\)]+)\)/;
 
 function formatDate(date: string | null | undefined): string {
 	glog.debug(date);
 	if (!date || date === "" || date === MISSING_SENTINEL) return MISSING_SENTINEL;
 	return `${dayjs(date).format(prettyDateFormat)} (${date})`;
+}
+
+function parseDate(raw: string): string | null {
+	if (raw === MISSING_SENTINEL) return null;
+	const match = raw.match(dateMatcher);
+	if (!match) return null;
+	glog.info({ match });
+	const date = new Date(match[1]).toISOString();
+	if (!date) return null;
+	return date;
 }
 
 export function ppEvent(data: EventData): string {
@@ -36,17 +48,28 @@ ${d.desc}
 	`.trim();
 }
 
-export function parsePPEvent(raw: string): { data: EventData } | { error: string } {
-	// TODO: update regex to handle sentinel value for dates
-	const matcher =
-		/\*\*Name:\*\* (.*)\n\*\*Start:\*\* ([^\(]*\((.*)\)|\*not provided\*)\n\*\*End:\*\* ([^\(]*\((.*)\)|\*not provided\*)\n\*\*Location:\*\* (.*)\n\n([\s\S]*)/;
-	const match = matcher.exec(raw);
-	if (!match) return { error: "failed to parse event" };
-	const vals: (string | null)[] = [];
-	for (let i = 1; i < match.length; i++) {
-		vals[i] = match[i];
-		if (match[i] === MISSING_SENTINEL) vals[i] = null;
+export function parsePPEvent(raw: string): EventData {
+	const data: EventData = { name: null, start: null, end: null, location: null, desc: null };
+	const lines = raw.split("\n");
+	const kvLines = lines
+		.map((line, idx) => ({ line, idx }))
+		.map(({ line, idx }) => ({ match: line.match(kvMatcher), idx }))
+		.filter(({ match }) => match)
+		.map(({ match, idx }) => ({ match: match as RegExpMatchArray, idx }));
+
+	for (const { match } of kvLines) {
+		let [_, key, value] = match;
+		key = key.toLowerCase();
+		if (key === "name") data.name = value;
+		else if (key === "start") data.start = parseDate(value);
+		else if (key === "end") data.end = parseDate(value);
+		else if (key === "location") data.location = value;
+		else glog.warn(`Unknown key when parsing pp event: ${key}`);
 	}
-	const [, name, start, end, location, desc] = vals;
-	return { data: { name, start, end, location, desc } };
+
+	const lastKvLineIdx = kvLines[kvLines.length - 1]?.idx;
+	const descLines = lines.slice(lastKvLineIdx + 1);
+	data.desc = descLines.join("\n").trim();
+
+	return data;
 }
