@@ -13,13 +13,14 @@ import {
 } from "discord.js";
 import { glog } from "./log";
 import { parseCreateEvent } from "./openai";
-import { eventPreviewGuide, parsePPEvent, ppEvent } from "./pretty";
+import { auditMessage, eventPreviewGuide, parseAuditMessage, parsePPEvent, ppEvent } from "./pretty";
 import { TextInputStyle } from "discord.js";
 import { ModalActionRowComponentBuilder } from "discord.js";
 import { parseEditEvent } from "./openai";
-
 import { CacheType, ModalSubmitInteraction } from "discord.js";
 import { now, validEventDataSchema } from "./template";
+
+const GENERIC_ERROR_MESSAGE = { content: "Sorry, we ran into an issue creating your event.", ephemeral: true };
 
 export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	if (!m.content) return;
@@ -29,7 +30,7 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	let log = glog.child({ from: m.author.id, me: me?.id, content });
 	log.info("Received message");
 
-	const loading = await m.channel.send("Thinking...");
+	const loading = await m.channel.send("Parsing your event data. Please wait...");
 
 	const resp = await parseCreateEvent({ ...now(), eventInfo: content });
 	if ("error" in resp) {
@@ -47,7 +48,7 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	// Manually copy the full event body as the content when we create an event. We can't trust the LLM to do it.
 	const msg = ppEvent({ ...resp.result, desc: content }, eventPreviewGuide);
 	// post the username in a message as an audit log
-	const op = await m.channel.send({ content: `*Event creation started by ${m.author.tag}*` });
+	const op = await m.channel.send({ content: auditMessage(m.author.tag) });
 	await op.reply({ content: msg, components: [buildActionButtons()] });
 	await loading.delete();
 }
@@ -74,10 +75,15 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 }
 
 async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
-	const { guild } = intn;
+	const { guild, channel } = intn;
 	if (!guild) {
 		glog.error("No guild found for create event button");
-		intn.reply({ content: "Sorry, we ran into an issue creating your event.", ephemeral: true });
+		intn.reply(GENERIC_ERROR_MESSAGE);
+		return;
+	}
+	if (!channel) {
+		glog.error("No channel found for create event button");
+		intn.reply(GENERIC_ERROR_MESSAGE);
 		return;
 	}
 	const data = parsePPEvent(intn.message.content);
@@ -85,7 +91,6 @@ async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
 	if (!validated.success) {
 		const { error } = validated;
 		const msgs = error.issues.map((e: any) => `**${e.path.join(".")}**: ${e.message}`).join("\n");
-		glog.debug(error);
 		intn.reply({
 			content: `Please fix the below issue(s) before creating your event:\n${msgs}`,
 			ephemeral: true,
@@ -102,7 +107,22 @@ async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
 		entityType: GuildScheduledEventEntityType.External,
 	};
 	if (v.location) params.entityMetadata = { location: v.location };
-	if (v.desc) params.description = v.desc;
+
+	const op = await parentMessage(intn.message);
+	if (!op) {
+		glog.error("No parent message found for create event button");
+		intn.reply(GENERIC_ERROR_MESSAGE);
+		return;
+	}
+	const authorTag = parseAuditMessage(op.content);
+	if (!authorTag) {
+		glog.error("No audit message parsed from OP for create event button");
+		intn.reply(GENERIC_ERROR_MESSAGE);
+		return;
+	}
+	v.desc = `*Event created by ${authorTag}*\n\n${v.desc || ""}`.trim();
+	params.description = v.desc;
+
 	try {
 		await guild.scheduledEvents.create(params);
 	} catch (e) {
@@ -114,14 +134,10 @@ async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
 		return;
 	}
 
-	const op = await parentMessage(intn.message);
 	const confirmContent = { content: `*Created new server event:*\n${ppEvent(v)}` };
-	if (op) {
-		await op.reply(confirmContent);
-	} else {
-		await intn.channel?.send(confirmContent);
-	}
+	await channel.send(confirmContent);
 	intn.message.delete();
+	op.delete();
 }
 
 async function showEditModal(intn: ButtonInteraction<CacheType>) {
@@ -150,12 +166,10 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 	}
 
 	const data = parsePPEvent(intn.message.content);
-	glog.debug(data);
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
 	const loading = intn.reply({ content: "Updating your event data. Please wait...", ephemeral: true });
 
 	const resp = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
-	glog.debug(resp);
 	if ("error" in resp) {
 		glog.error(resp.error);
 		intn.reply({
