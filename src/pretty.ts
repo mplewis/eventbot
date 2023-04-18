@@ -9,6 +9,12 @@ dayjs.extend(timezone);
 
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
+export const eventPreviewGuide = `
+*Here's your event preview. If everything looks good, hit **Create Event** to add it to the server. Otherwise, you can correct the details or delete this draft.*
+*I understand natural language – you can tell me to "change the date to 7:30 PM on Jan 11" or "change the location to Cheesman Park."*
+────────────────────────────────────────
+`.trim();
+
 const MISSING_SENTINEL = "*not provided*";
 const kvMatcher = /^\*\*([A-Za-z]+):\*\* (.*)$/;
 const dateMatcher = /[^\(]+\(([^\)]+)\)/;
@@ -29,16 +35,13 @@ function parseDate(raw: string): string | null {
 	return date;
 }
 
-export function ppEvent(data: EventData): string {
+export function ppEvent(data: EventData, prefix?: string): string {
 	const d: Record<string, any> = {};
 	for (const [key, value] of Object.entries(data)) {
 		const k = key as keyof EventData;
 		d[k] = value ?? MISSING_SENTINEL;
 	}
-	return `
-*Here's your event preview. If everything looks good, hit **Create Event** to add it to the server. Otherwise, you can correct the details or delete this draft.*
-*I understand natural language – you can tell me to "change the date to 7:30 PM on Jan 11" or "change the location to Cheesman Park."*
-────────────────────────────────────────
+	let out = `
 **Name:** ${d.name}
 **Start:** ${formatDate(d.start)}
 **End:** ${formatDate(d.end)}
@@ -46,6 +49,8 @@ export function ppEvent(data: EventData): string {
 
 ${d.desc}
 	`.trim();
+	if (prefix) out = `${prefix}\n${out}`;
+	return out;
 }
 
 export function parsePPEvent(raw: string): EventData {
