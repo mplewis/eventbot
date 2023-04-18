@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { EventData } from "./template";
-import { parsePPEvent, ppEvent } from "./pretty";
+import { auditMessage, parseAuditMessage, parsePPEvent, ppEvent } from "./pretty";
 
 describe("pretty", () => {
 	describe("ppEvent", () => {
@@ -15,10 +15,7 @@ describe("pretty", () => {
 		it("pretty prints an event", () => {
 			const pp = ppEvent(data);
 			expect(pp).toMatchInlineSnapshot(`
-				"*Here's your event preview. If everything looks good, hit **Create Event** to add it to the server. Otherwise, you can correct the details or delete this draft.*
-				*I understand natural language – you can tell me to \\"change the date to 7:30 PM on Jan 11\\" or \\"change the location to Cheesman Park.\\"*
-				────────────────────────────────────────
-				**Name:** Central Park Meetup
+				"**Name:** Central Park Meetup
 				**Start:** Monday, April 17, 2023 at 12:00 PM MDT (2023-04-17T18:00:00.000Z)
 				**End:** *not provided*
 				**Location:** Central Park
@@ -55,6 +52,12 @@ Come to Central Park and hang out with us! Bring your own brats.
 				location: "Central Park",
 				desc: "Come to Central Park and hang out with us! Bring your own brats.",
 			});
+		});
+	});
+
+	describe("parseAuditMessage", () => {
+		it("parses the generated audit message", () => {
+			expect(parseAuditMessage(auditMessage("fs0ciety#1337"))).toEqual("fs0ciety#1337");
 		});
 	});
 });

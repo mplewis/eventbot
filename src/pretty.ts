@@ -78,3 +78,13 @@ export function parsePPEvent(raw: string): EventData {
 
 	return data;
 }
+
+export function auditMessage(userTag: string): string {
+	return `Event creation started by \`${userTag}\``;
+}
+
+export function parseAuditMessage(raw: string): string | null {
+	const match = raw.match(/^Event creation started by `(.+)`/);
+	if (!match) return null;
+	return match[1];
+}
