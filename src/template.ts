@@ -14,6 +14,19 @@ export const eventDataSchema = z.object({
 });
 export type EventData = z.infer<typeof eventDataSchema>;
 
+const errSchema = (name: string) => ({
+	required_error: `Please provide a ${name} for your event.`,
+	invalid_type_error: `Please provide a valid ${name} for your event.`,
+});
+export const validEventDataSchema = z.object({
+	name: z.string({ ...errSchema("name") }),
+	start: z.string({ ...errSchema("start time") }),
+	end: z.string({ ...errSchema("end time") }),
+	desc: z.string({ ...errSchema("description") }),
+	location: z.string().or(z.null()),
+});
+export type ValidEventData = z.infer<typeof validEventDataSchema>;
+
 export async function render(name: string, args: Record<string, any>): Promise<string> {
 	for (const [key, value] of Object.entries(args)) {
 		if (typeof value === "object") args[key] = JSON.stringify(value);

@@ -19,7 +19,7 @@ import { ModalActionRowComponentBuilder } from "discord.js";
 import { parseEditEvent } from "./openai";
 
 import { CacheType, ModalSubmitInteraction } from "discord.js";
-import { now } from "./template";
+import { now, validEventDataSchema } from "./template";
 import z from "zod";
 
 export async function handleMessage(me: ClientUser, m: Message<boolean>) {
@@ -93,18 +93,7 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 			return;
 		}
 		const data = parsePPEvent(intn.message.content);
-		const errSchema = (name: string) => ({
-			required_error: `Please provide a ${name} for your event.`,
-			invalid_type_error: `Please provide a valid ${name} for your event.`,
-		});
-		const schema = z.object({
-			name: z.string({ ...errSchema("name") }),
-			start: z.string({ ...errSchema("start time") }),
-			end: z.string({ ...errSchema("end time") }),
-			desc: z.string({ ...errSchema("description") }),
-			location: z.string().or(z.null()),
-		});
-		const validated = schema.safeParse(data);
+		const validated = validEventDataSchema.safeParse(data);
 		if (!validated.success) {
 			const { error } = validated;
 			const msgs = error.issues.map((e: any) => `**${e.path.join(".")}**: ${e.message}`).join("\n");
@@ -137,8 +126,7 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 			return;
 		}
 		await intn.message.delete();
-		intn.reply({ content: `Your event "${v.name}" was created successfully on the server!`, ephemeral: true });
-		// TODO: Better public event creation message (pretty tmpl w/ diff prefix)
+		intn.channel?.send({ content: `Created new server event:\n\n${ppEvent(v)}` });
 		return;
 	}
 
