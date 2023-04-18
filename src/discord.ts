@@ -30,25 +30,23 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	let log = glog.child({ from: m.author.id, me: me?.id, content });
 	log.info("Received message");
 
-	const loading = await m.channel.send("Parsing your event data. Please wait...");
+	const loading = await m.reply("Parsing your event data. Please wait...");
 
 	const resp = await parseCreateEvent({ ...now(), eventInfo: content });
 	if ("error" in resp) {
 		log.error(resp.error);
-		m.channel.send("Sorry, something went wrong.");
-		loading.delete();
+		loading.edit("Sorry, something went wrong.");
 		return;
 	}
 	if ("irrelevant" in resp) {
-		m.channel.send("Sorry, that didn't look like an event to me.");
-		loading.delete();
+		loading.edit("Sorry, that didn't look like an event to me.");
 		return;
 	}
 
 	// Manually copy the full event body as the content when we create an event. We can't trust the LLM to do it.
 	const msg = ppEvent({ ...resp.result, desc: content }, eventPreviewGuide);
 	// post the username in a message as an audit log
-	const op = await m.channel.send({ content: auditMessage(m.author.tag) });
+	const op = await m.reply({ content: auditMessage(m.author.tag) });
 	await op.reply({ content: msg, components: [buildActionButtons()] });
 	await loading.delete();
 }
@@ -197,7 +195,10 @@ async function discardDraft(intn: ButtonInteraction<CacheType>) {
 	let forName = " ";
 	const data = parsePPEvent(intn.message.content);
 	if (data.name) forName = `for "${data.name}"`;
-	await intn.message.delete();
+
+	const op = await parentMessage(intn.message);
+	if (op) op.delete();
+	intn.message.delete();
 	intn.reply({
 		content: `Your event draft ${forName} was successfully discarded.`.replaceAll(/\s+/g, " "),
 		ephemeral: true,
