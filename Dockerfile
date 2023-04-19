@@ -1,23 +1,21 @@
-FROM golang:1.20 AS build
+FROM node:18.16.0 as build
+
 WORKDIR /app
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
+
 COPY . .
-RUN CGO_ENABLED=0 go build -o app .
+RUN pnpm build
 
 ########################################
 
-FROM alpine:latest as support
-RUN apk --no-cache add tzdata zip ca-certificates
-WORKDIR /usr/share/zoneinfo
-RUN zip -q -r -0 /zoneinfo.zip .
+FROM node:18.16.0 as prod
 
-########################################
-
-FROM scratch AS prod
 WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY . .
 
-ENV ZONEINFO /zoneinfo.zip
-COPY --from=support /zoneinfo.zip /
-COPY --from=support /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
-COPY --from=build /app/app /app/app
-CMD [ "/app/app" ]
+CMD ["node", "dist/index.js"]
