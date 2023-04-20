@@ -22,7 +22,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@3f6690a76cbcbe44da6bac853d66df365ab3af27
         with:
-          images: mplewis/mojikopi
+          images: mplewis/eventbot
 
       - name: Build and push Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
