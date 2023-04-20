@@ -19,6 +19,7 @@ import { ModalActionRowComponentBuilder } from "discord.js";
 import { parseEditEvent } from "./openai";
 import { CacheType, ModalSubmitInteraction } from "discord.js";
 import { now, validEventDataSchema } from "./template";
+import { listenChannel } from "./env";
 
 const GENERIC_ERROR_MESSAGE = (verb: string) => ({
 	content: `Sorry, we ran into an issue ${verb} your event.`,
@@ -32,6 +33,8 @@ const GENERIC_ERROR_MESSAGE = (verb: string) => ({
  */
 export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	if (!m.content) return; // if it wasn't for us, we can't see the content
+	const channelName = (m.guild?.channels.cache.find((c) => c.id === m.channelId)?.name || "").toLowerCase();
+	if (channelName !== listenChannel.toLowerCase()) return; // ignore messages in other channels
 	if (m.author.id === me?.id) return; // ignore our own messages
 	const log = glog.child({ from: m.author.tag });
 

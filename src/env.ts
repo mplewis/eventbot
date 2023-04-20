@@ -20,3 +20,5 @@ export const discordBotToken = get("DISCORD_BOT_TOKEN");
 export const openaiAPIKey = get("OPENAI_API_KEY");
 /** Display logs at or above this log level */
 export const logLevel = get("LOG_LEVEL", "info");
+/** Listen in this channel only. */
+export const listenChannel = get("LISTEN_CHANNEL", "eventbot");
