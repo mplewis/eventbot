@@ -7,6 +7,7 @@ import { glog } from "./log";
 dayjs.extend(advancedFormat);
 dayjs.extend(timezone);
 
+/** Render dates in a human-readable way, e.g. `Monday, January 1, 2021 at 12:00 PM EST` */
 export const prettyDateFormat = "dddd, MMMM D, YYYY [at] h:mm A z";
 
 export const eventPreviewGuide = `

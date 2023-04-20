@@ -2,29 +2,54 @@ import { Client, ClientUser, Events } from "discord.js";
 import { discordBotToken } from "./env";
 import { glog } from "./log";
 import { handleButtonClick, handleMessage, handleModalSubmit } from "./discord";
+import { BitFieldResolvable } from "discord.js";
+import { GatewayIntentsString } from "discord.js";
 
+/** The intents this bot requires to function */
+const intents: BitFieldResolvable<GatewayIntentsString, number> = ["Guilds", "GuildMessages"];
+
+/** Catch any thrown error and log it rather than crashing. */
+async function catchWrap(fn: () => Promise<void>) {
+	try {
+		await fn();
+	} catch (error: any) {
+		glog.error({ error: error?.stack ?? error }, "unhandled error");
+	}
+}
+async function main() {}
+
+main();
+
+/** The current signed-in bot user */
 let me: ClientUser | undefined;
 
-const client = new Client({ intents: ["Guilds", "GuildMessages"] });
+// Connect to Discord
+const client = new Client({ intents });
 client.once(Events.ClientReady, (c) => {
-	let log = glog.child({ id: c.user.id, tag: c.user.tag });
 	me = c.user;
-	log.info("Ready!");
+	glog.info({ tag: c.user.tag }, "Connected!");
 });
 glog.info("Connecting...");
 client.login(discordBotToken);
 
+// Handle incoming messages
 client.on("messageCreate", (m) => {
-	if (!me) {
-		glog.error("missing `me` on message create");
-		return;
-	}
-	return handleMessage(me, m);
+	catchWrap(async () => {
+		if (!me) {
+			glog.error("missing `me` on message create");
+			return;
+		}
+		glog.debug(m, "messageCreate");
+		return handleMessage(me, m);
+	});
 });
 
+// Handle interactions (button clicks, modal submits, etc.)
 client.on("interactionCreate", async (intn) => {
-	glog.debug(intn);
-	if (intn.isButton()) return handleButtonClick(intn);
-	if (intn.isModalSubmit()) return handleModalSubmit(intn);
-	glog.error(`Unknown interaction type: ${intn.type}`);
+	catchWrap(async () => {
+		glog.debug(intn, "interactionCreate");
+		if (intn.isButton()) return handleButtonClick(intn);
+		if (intn.isModalSubmit()) return handleModalSubmit(intn);
+		glog.error(`Unknown interaction type: ${intn.type}`);
+	});
 });

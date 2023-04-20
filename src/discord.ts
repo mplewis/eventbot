@@ -20,21 +20,32 @@ import { parseEditEvent } from "./openai";
 import { CacheType, ModalSubmitInteraction } from "discord.js";
 import { now, validEventDataSchema } from "./template";
 
-const GENERIC_ERROR_MESSAGE = { content: "Sorry, we ran into an issue creating your event.", ephemeral: true };
+const GENERIC_ERROR_MESSAGE = (verb: string) => ({
+	content: `Sorry, we ran into an issue ${verb} your event.`,
+	ephemeral: true,
+});
 
+/**
+ * Handle an incoming message.
+ * @param me The bot user
+ * @param m The received message
+ */
 export async function handleMessage(me: ClientUser, m: Message<boolean>) {
-	if (!m.content) return;
-	if (m.author.id === me?.id) return;
-	const tagMatcher = /(<@\d+>\s*)/g;
-	const content = m.content.replaceAll(tagMatcher, "");
-	let log = glog.child({ from: m.author.id, me: me?.id, content });
-	log.info("Received message");
+	if (!m.content) return; // if it wasn't for us, we can't see the content
+	if (m.author.id === me?.id) return; // ignore our own messages
+	const log = glog.child({ from: m.author.tag });
+
+	// strip the leading @Eventbot tag
+	const tagMatcher = /^(<@\d+>\s*)/;
+	const content = m.content.replace(tagMatcher, "");
+
+	log.info({ content }, "received message");
 
 	const loading = await m.reply("Parsing your event data. Please wait...");
 
 	const resp = await parseCreateEvent({ ...now(), eventInfo: content });
 	if ("error" in resp) {
-		log.error(resp.error);
+		log.error({ error: resp.error }, "error parsing event");
 		loading.edit("Sorry, something went wrong.");
 		return;
 	}
@@ -51,6 +62,10 @@ export async function handleMessage(me: ClientUser, m: Message<boolean>) {
 	await loading.delete();
 }
 
+/**
+ * Handle a button click interaction.
+ * @param intn The interaction
+ */
 export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 	const id = intn.customId;
 	if (id === "createEventBtn") {
@@ -67,64 +82,74 @@ export async function handleButtonClick(intn: ButtonInteraction<CacheType>) {
 	}
 
 	(async () => {
+		glog.error({ customId: intn.customId }, "unknown button interaction");
 		const resp = await intn.reply({ content: `\`${intn.customId}\` not implemented yet.`, ephemeral: true });
 		setTimeout(() => resp.delete(), 2000);
 	})();
 }
 
+/**
+ * Create an event from a draft.
+ * @param intn The "Create Event" button interaction
+ * @returns
+ */
 async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
 	const { guild, channel } = intn;
 	if (!guild) {
-		glog.error("No guild found for create event button");
-		intn.reply(GENERIC_ERROR_MESSAGE);
+		glog.error("no guild found for create event button");
+		intn.reply(GENERIC_ERROR_MESSAGE("creating"));
 		return;
 	}
 	if (!channel) {
-		glog.error("No channel found for create event button");
-		intn.reply(GENERIC_ERROR_MESSAGE);
+		glog.error("no channel found for create event button");
+		intn.reply(GENERIC_ERROR_MESSAGE("creating"));
 		return;
 	}
+	const log = glog.child({ from: intn.user.tag });
+
 	const data = parsePPEvent(intn.message.content);
 	const validated = validEventDataSchema.safeParse(data);
 	if (!validated.success) {
 		const { error } = validated;
-		const msgs = error.issues.map((e: any) => `**${e.path.join(".")}**: ${e.message}`).join("\n");
+		const errors = error.issues.map((e: any) => `**${e.path.join(".")}**: ${e.message}`).join("\n");
+		log.info({ data, errors }, "event failed validation");
 		intn.reply({
-			content: `Please fix the below issue(s) before creating your event:\n${msgs}`,
+			content: `Please fix the below issue(s) before creating your event:\n${errors}`,
 			ephemeral: true,
 		});
 		return;
 	}
+	log.info({ event: validated.data }, "creating validated event");
 
 	const v = validated.data;
 	const params: GuildScheduledEventCreateOptions = {
+		privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+		entityType: GuildScheduledEventEntityType.External,
 		name: v.name,
 		scheduledStartTime: v.start,
 		scheduledEndTime: v.end,
-		privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-		entityType: GuildScheduledEventEntityType.External,
 	};
 	if (v.location) params.entityMetadata = { location: v.location };
 
 	const op = await parentMessage(intn.message);
 	if (!op) {
-		glog.error("No parent message found for create event button");
+		log.error("No parent message found for create event button");
 		intn.reply(GENERIC_ERROR_MESSAGE);
 		return;
 	}
 	const authorTag = parseAuditMessage(op.content);
 	if (!authorTag) {
-		glog.error("No audit message parsed from OP for create event button");
+		log.error("No audit message parsed from OP for create event button");
 		intn.reply(GENERIC_ERROR_MESSAGE);
 		return;
 	}
-	v.desc = `*Event created by ${authorTag}*\n\n${v.desc || ""}`.trim();
+	v.desc = `*Event created by ${authorTag}*\n${v.desc || ""}`.trim();
 	params.description = v.desc;
 
 	try {
 		await guild.scheduledEvents.create(params);
-	} catch (e) {
-		glog.error(e);
+	} catch (error: any) {
+		log.error(error?.stack ?? error, "error creating event");
 		intn.reply({
 			content: `Sorry, we ran into an issue creating your event:\n\`\`\`${e}\`\`\``,
 			ephemeral: true,
@@ -132,12 +157,17 @@ async function createEventFromDraft(intn: ButtonInteraction<CacheType>) {
 		return;
 	}
 
+	log.info({ event: v }, "created event");
 	const confirmContent = { content: `*Created new server event:*\n${ppEvent(v)}` };
 	await channel.send(confirmContent);
 	intn.message.delete();
 	op.delete();
 }
 
+/**
+ * Show the modal for editing event details.
+ * @param intn The "Edit Details" button interaction
+ */
 async function showEditModal(intn: ButtonInteraction<CacheType>) {
 	await intn.showModal(
 		new ModalBuilder()
@@ -157,19 +187,26 @@ async function showEditModal(intn: ButtonInteraction<CacheType>) {
 	);
 }
 
+/**
+ * Handle the submission of the edit modal.
+ * @param intn The modal submit interaction
+ */
 export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>) {
+	const log = glog.child({ from: intn.user.tag });
 	if (!intn.message) {
-		glog.error("No message found for modal submit");
+		log.error("no message found for modal submit");
+		intn.reply(GENERIC_ERROR_MESSAGE("editing"));
 		return;
 	}
 
 	const data = parsePPEvent(intn.message.content);
 	const updateInfo = intn.fields.getTextInputValue("updateInfo");
 	const loading = intn.reply({ content: "Updating your event data. Please wait...", ephemeral: true });
-
+	log.info({ updateInfo }, "parsing event update");
 	const resp = await parseEditEvent({ ...now(), existingEventData: data, updateInfo });
+
 	if ("error" in resp) {
-		glog.error(resp.error);
+		log.error(resp.error, "error parsing event update");
 		intn.reply({
 			content: `Sorry, we ran into an issue editing your event. Please try again.\n\nYou sent:\n${updateInfo}`,
 			ephemeral: true,
@@ -188,23 +225,35 @@ export async function handleModalSubmit(intn: ModalSubmitInteraction<CacheType>)
 
 	const updated = ppEvent(resp.result, eventPreviewGuide);
 	await intn.message.edit(updated);
+	log.info({ updated }, "updated event");
 	(await loading).delete();
 }
 
+/**
+ * Discard a draft event.
+ * @param intn The "Discard Draft" button interaction
+ */
 async function discardDraft(intn: ButtonInteraction<CacheType>) {
+	const log = glog.child({ from: intn.user.tag });
 	let forName = " ";
 	const data = parsePPEvent(intn.message.content);
 	if (data.name) forName = `for "${data.name}"`;
 
 	const op = await parentMessage(intn.message);
 	if (op) op.delete();
-	intn.message.delete();
+	await intn.message.delete();
+	log.info("discarded event draft");
 	intn.reply({
 		content: `Your event draft ${forName} was successfully discarded.`.replaceAll(/\s+/g, " "),
 		ephemeral: true,
 	});
 }
 
+/**
+ * Get the parent of a message (the one the message is replying to).
+ * @param m The message to get the parent of
+ * @returns The message, or null if it isn't replying to a message
+ */
 async function parentMessage(m: Message<boolean>): Promise<Message<boolean> | null> {
 	const opRef = await m.reference;
 	if (!opRef?.messageId) return null;
@@ -215,6 +264,7 @@ async function parentMessage(m: Message<boolean>): Promise<Message<boolean> | nu
 	}
 }
 
+/** Build the action buttons for an event draft. */
 function buildActionButtons() {
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder().setLabel("Create Event").setStyle(ButtonStyle.Success).setCustomId("createEventBtn"),
