@@ -2,7 +2,7 @@
 
 Create events in your Discord server using natural language.
 
-[Invite the bot.](https://discord.com/api/oauth2/authorize?client_id=1095402658719862925&permissions=17592186046464&scope=bot)
+[Invite the bot.](https://discord.com/api/oauth2/authorize?client_id=1095402658719862925&permissions=8589936640&scope=bot)
 
 # Usage
 
